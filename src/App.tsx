@@ -1,0 +1,119 @@
+import { useState } from 'react';
+import { planData } from './data';
+import { OverviewSection } from './components/OverviewSection';
+import { ScheduleSection } from './components/ScheduleSection';
+import { CalendarSection } from './components/CalendarSection';
+import { DashboardSection } from './components/DashboardSection';
+import { useWorkoutLog } from './hooks/useWorkoutLog';
+import { Dumbbell, Calendar, BarChart3 } from 'lucide-react';
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState<'split' | 'calendar' | 'dashboard'>('split');
+  const logsManager = useWorkoutLog();
+
+  const parts = planData.workout_plan_name.split(' ');
+  const lastWord = parts.pop();
+
+  return (
+    <div className="min-h-screen bg-black text-white font-sans selection:bg-[#CCFF00]/30 selection:text-[#CCFF00]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12 md:px-12 md:py-16 flex flex-col gap-8 sm:gap-12">
+        
+        {/* Header */}
+        <header className="border-b border-white/20 pb-8 sm:pb-12 flex flex-col md:flex-row justify-between items-start md:items-end bg-black">
+          <div>
+            <h2 className="text-[#CCFF00] text-xs font-black uppercase tracking-widest mb-3 font-mono">// Hypertrophy Protocol V1.0</h2>
+            <h1 className="text-3xl sm:text-5xl md:text-7xl font-black uppercase leading-none tracking-tighter">
+              {parts.join(' ')}<br/><span className="text-[#CCFF00]">{lastWord}.</span>
+            </h1>
+          </div>
+          <div className="text-left md:text-right mt-6 md:mt-0">
+            <div className="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-50 block md:hidden">Details</div>
+            <div className="text-4xl font-mono leading-none font-bold hidden md:block">6.02</div>
+            <div className="text-[10px] font-mono opacity-50 uppercase tracking-widest mt-2">{planData.structure_description.exercise_limit}</div>
+          </div>
+        </header>
+
+        {/* Dynamic Program Intro */}
+        <div>
+           <p className="text-base sm:text-xl md:text-2xl font-black max-w-4xl leading-tight uppercase tracking-tight text-zinc-300">
+             {planData.structure_description.overview}
+           </p>
+        </div>
+
+        {/* Central High-Contrast Tab Selector */}
+        <div className="grid grid-cols-3 border border-white/20 select-none">
+          <button
+            onClick={() => setActiveTab('split')}
+            className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-4 p-3 sm:p-5 font-black uppercase tracking-wider text-[10px] sm:text-xs md:text-sm text-center sm:text-left transition-all border-r border-white/20 cursor-pointer ${
+              activeTab === 'split' 
+                ? 'bg-[#CCFF00] text-black' 
+                : 'bg-transparent text-white/50 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <span className="font-mono text-[9px] opacity-65 hidden md:inline">01 //</span>
+            <span className="truncate">Active Split</span>
+            <Dumbbell className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+          </button>
+
+          <button
+            onClick={() => setActiveTab('calendar')}
+            className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-4 p-3 sm:p-5 font-black uppercase tracking-wider text-[10px] sm:text-xs md:text-sm text-center sm:text-left transition-all border-r border-white/20 cursor-pointer ${
+              activeTab === 'calendar' 
+                ? 'bg-[#CCFF00] text-black' 
+                : 'bg-transparent text-white/50 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <span className="font-mono text-[9px] opacity-65 hidden md:inline">02 //</span>
+            <span className="truncate">Calendar</span>
+            <Calendar className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+          </button>
+
+          <button
+            onClick={() => setActiveTab('dashboard')}
+            className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-4 p-3 sm:p-5 font-black uppercase tracking-wider text-[10px] sm:text-xs md:text-sm text-center sm:text-left transition-all cursor-pointer ${
+              activeTab === 'dashboard' 
+                ? 'bg-[#CCFF00] text-black' 
+                : 'bg-transparent text-white/50 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <span className="font-mono text-[9px] opacity-65 hidden md:inline">03 //</span>
+            <span className="truncate">Analytics</span>
+            <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+          </button>
+        </div>
+
+        {/* Tab content panels with transitions */}
+        <main className="min-h-[400px]">
+          {activeTab === 'split' && (
+            <div className="space-y-16 animate-fade-in">
+              <OverviewSection />
+              <ScheduleSection logsManager={logsManager} />
+            </div>
+          )}
+
+          {activeTab === 'calendar' && (
+            <div className="animate-fade-in">
+              <CalendarSection logsManager={logsManager} />
+            </div>
+          )}
+
+          {activeTab === 'dashboard' && (
+            <div className="animate-fade-in">
+              <DashboardSection logsManager={logsManager} />
+            </div>
+          )}
+        </main>
+        
+        {/* Footer */}
+        <footer className="mt-16 pt-8 border-t border-white/20 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <p className="text-[10px] font-mono font-bold opacity-45 uppercase tracking-widest">
+            Commit to the daily protocol. Elite hypertrophy standard.
+          </p>
+          <p className="text-[10px] font-mono opacity-30 uppercase">
+            Designed for BHUPENDRA RAWAT // Offline First / Sheet Backed
+          </p>
+        </footer>
+      </div>
+    </div>
+  );
+}
