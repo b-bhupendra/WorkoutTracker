@@ -1,9 +1,55 @@
 import React, { useState, useEffect } from 'react';
 import { planData } from '../data';
 import { Exercise } from '../types';
-import { PlayCircle, TrendingUp, Save, Check, Shuffle } from 'lucide-react';
+import { PlayCircle, TrendingUp, Save, Check, Shuffle, Timer, Play, Pause, RotateCcw } from 'lucide-react';
 import { useWorkoutLog } from '../hooks/useWorkoutLog';
 import { getSuggestion } from '../utils/fitness';
+
+const RestTimer = ({ defaultSeconds = 90 }: { defaultSeconds?: number }) => {
+  const [timeLeft, setTimeLeft] = useState(defaultSeconds);
+  const [isActive, setIsActive] = useState(false);
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+    if (isActive && timeLeft > 0) {
+      interval = setInterval(() => {
+        setTimeLeft((time) => time - 1);
+      }, 1000);
+    } else if (timeLeft === 0) {
+      setIsActive(false);
+      if (interval) clearInterval(interval);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isActive, timeLeft]);
+
+  const toggleTimer = () => setIsActive(!isActive);
+  const resetTimer = () => {
+    setIsActive(false);
+    setTimeLeft(defaultSeconds);
+  };
+
+  const mins = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+  const secs = (timeLeft % 60).toString().padStart(2, '0');
+
+  return (
+    <div className="flex items-center gap-3 bg-black border border-white/20 p-2 ml-4">
+      <Timer className={`w-4 h-4 ${isActive ? 'text-[#CCFF00] animate-pulse' : 'text-zinc-500'}`} />
+      <span className={`font-mono text-xl ${isActive ? 'text-[#CCFF00]' : 'text-white'}`}>
+        {mins}:{secs}
+      </span>
+      <div className="flex gap-1 border-l border-white/10 pl-2">
+        <button onClick={toggleTimer} className="p-1.5 hover:bg-white/10 transition-colors cursor-pointer text-white">
+          {isActive ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+        </button>
+        <button onClick={resetTimer} className="p-1.5 hover:bg-white/10 transition-colors cursor-pointer text-white">
+          <RotateCcw className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const ExerciseRow: React.FC<{ exercise: Exercise; index: number; dayType: string; dayId: number; logsManager: ReturnType<typeof useWorkoutLog> }> = ({ exercise, index, dayType, dayId, logsManager }) => {
   const [expanded, setExpanded] = useState(false);
@@ -24,7 +70,7 @@ const ExerciseRow: React.FC<{ exercise: Exercise; index: number; dayType: string
   }, [activeExerciseName, dayId, exercise.sets]);
 
   const suggestion = getSuggestion(exercise.reps || '', latestLog);
-  const isLight = dayType.includes('Light');
+  const isLight = dayType.includes('Stretch');
 
   const handleSave = () => {
     saveLog(dayId, activeExerciseName, parseFloat(weightInput) || 0, repsInput.map(r => parseInt(r) || 0));
@@ -189,7 +235,7 @@ const ExerciseRow: React.FC<{ exercise: Exercise; index: number; dayType: string
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                  <div>
                    <p className="text-[10px] font-bold opacity-40 uppercase tracking-widest mb-2 flex items-center justify-between">
                      <span>Weight (KG/LBS)</span>
@@ -225,6 +271,15 @@ const ExerciseRow: React.FC<{ exercise: Exercise; index: number; dayType: string
                      ))}
                    </div>
                  </div>
+              </div>
+
+              {/* Timer Bar */}
+              <div className="flex flex-col sm:flex-row items-center justify-between bg-black/40 border border-white/10 p-3 mt-4">
+                <div className="flex items-center gap-2 mb-3 sm:mb-0">
+                  <Timer className="w-4 h-4 text-zinc-500" />
+                  <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest">Rest Timer</span>
+                </div>
+                <RestTimer defaultSeconds={isLight ? 90 : 180} />
               </div>
 
               <div className="mt-auto flex flex-col sm:flex-row items-center justify-end gap-3 w-full sm:w-auto pt-4 border-t border-white/5">

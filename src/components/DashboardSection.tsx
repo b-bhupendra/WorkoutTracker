@@ -13,7 +13,9 @@ interface DashboardSectionProps {
 
 export function DashboardSection({ logsManager }: DashboardSectionProps) {
   const { history, importHistory } = logsManager;
-  const [selectedExercise, setSelectedExercise] = useState<string>("Hack Squat or Leg Press");
+  const [selectedExercise, setSelectedExercise] = useState<string>(
+    planData.schedule[0]?.exercises[0]?.name || ""
+  );
 
   // Extract all unique exercises in split
   const allExercises = useMemo(() => {
@@ -60,12 +62,21 @@ export function DashboardSection({ logsManager }: DashboardSectionProps) {
     return data;
   }, [history, selectedExercise]);
 
-  // Volume history (total weight moved per session)
+  // Volume history (total weight moved per session) - Last 30 days
   const sessionVolumeData = useMemo(() => {
-    const dates = Object.keys(history).sort((a, b) => a.localeCompare(b)).slice(-10); // Last 10 sessions
+    const dates = Object.keys(history).sort((a, b) => a.localeCompare(b));
+    
+    // Filter to last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+
+    const filteredDates = dates.filter(d => d >= thirtyDaysAgoStr);
+    
+    // Fallback to something if no logs (or just map normally)
     const data: { dateLabel: string; totalVolume: number; date: string }[] = [];
 
-    dates.forEach(d => {
+    filteredDates.forEach(d => {
       let totalVolume = 0;
       const dayData = history[d];
       if (dayData) {
@@ -299,7 +310,7 @@ export function DashboardSection({ logsManager }: DashboardSectionProps) {
           {sessionVolumeData.length > 0 ? (
             <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={sessionVolumeData} margin={{ left: -10, right: 10, top: 10, bottom: 10 }}>
+                <LineChart data={sessionVolumeData} margin={{ left: -10, right: 10, top: 10, bottom: 10 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
                   <XAxis dataKey="dateLabel" stroke="#666" tick={{ fill: '#888', fontSize: 11 }} />
                   <YAxis stroke="#666" label={{ value: 'Tonnage (kg)', angle: -90, position: 'insideLeft', fill: '#888', fontSize: 11 }} tick={{ fill: '#888', fontSize: 11 }} />
@@ -307,12 +318,16 @@ export function DashboardSection({ logsManager }: DashboardSectionProps) {
                     contentStyle={{ backgroundColor: '#111', borderColor: '#333', color: '#fff' }}
                     labelStyle={{ fontWeight: 'bold', color: '#CCFF00' }}
                   />
-                  <Bar dataKey="totalVolume" name="Moved Mass (kg)" fill="#ffffff" radius={[2, 2, 0, 0]} maxBarSize={45}>
-                     {sessionVolumeData.map((entry, index) => (
-                       <rect key={`rect-${index}`} fill={index === sessionVolumeData.length - 1 ? "#CCFF00" : "#ffffff"} />
-                     ))}
-                  </Bar>
-                </BarChart>
+                  <Line 
+                    type="monotone" 
+                    dataKey="totalVolume" 
+                    name="Moved Mass (kg)" 
+                    stroke="#ffffff" 
+                    strokeWidth={3} 
+                    dot={{ fill: '#000', stroke: '#ffffff', strokeWidth: 2, r: 5 }} 
+                    activeDot={{ r: 7, strokeWidth: 0, fill: '#CCFF00' }}
+                  />
+                </LineChart>
               </ResponsiveContainer>
               <div className="flex justify-between text-[10px] font-mono opacity-40 uppercase mt-4">
                  <span>Baseline Session: {sessionVolumeData[0]?.totalVolume.toFixed(0)}kg</span>
