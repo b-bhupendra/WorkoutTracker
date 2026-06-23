@@ -27,7 +27,7 @@ export const planData: WorkoutPlan = {
     meals: [
       {
         name: "Morning (Post-Cardio / Breakfast)",
-        fuel: "50g of your Oats.",
+        fuel: "50g of your Oats (prepared with hot water from your kettle).",
         protein: "1 Scoop of Soy Isolate mixed with water.",
         goal: "Skip the mess breakfast entirely. Oats provide slow-digesting complex carbs to replenish glycogen from the morning run. Soy isolate halts muscle breakdown instantly."
       },
