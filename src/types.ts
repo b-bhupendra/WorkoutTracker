@@ -3,6 +3,8 @@ export interface Exercise {
   sets?: number;
   reps?: string;
   focus?: string;
+  videoUrl?: string;
+  alternatives?: string[];
 }
 
 export interface DayPlan {
@@ -13,6 +15,19 @@ export interface DayPlan {
   rest_between_sets: string;
   rest_between_reps: string;
   exercises: Exercise[];
+}
+
+export interface NutritionMeal {
+  name: string;
+  fuel: string;
+  protein: string;
+  goal: string;
+}
+
+export interface NutritionProtocol {
+  overview: string;
+  meals: NutritionMeal[];
+  digestive_note: string;
 }
 
 export interface WorkoutPlan {
@@ -36,5 +51,6 @@ export interface WorkoutPlan {
       rest_between_reps: string;
     };
   };
+  nutrition_protocol?: NutritionProtocol;
   schedule: DayPlan[];
 }

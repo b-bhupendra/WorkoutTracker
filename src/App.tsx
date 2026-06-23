@@ -5,10 +5,11 @@ import { ScheduleSection } from './components/ScheduleSection';
 import { CalendarSection } from './components/CalendarSection';
 import { DashboardSection } from './components/DashboardSection';
 import { useWorkoutLog } from './hooks/useWorkoutLog';
-import { Dumbbell, Calendar, BarChart3 } from 'lucide-react';
+import { NutritionSection } from './components/NutritionSection';
+import { Dumbbell, Calendar, BarChart3, Utensils } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'split' | 'calendar' | 'dashboard'>('split');
+  const [activeTab, setActiveTab] = useState<'split' | 'calendar' | 'dashboard' | 'nutrition'>('split');
   const logsManager = useWorkoutLog();
 
   const parts = planData.workout_plan_name.split(' ');
@@ -40,45 +41,57 @@ export default function App() {
            </p>
         </div>
 
-        {/* Central High-Contrast Tab Selector */}
-        <div className="grid grid-cols-3 border border-white/20 select-none">
+          <div className="grid grid-cols-2 md:grid-cols-4 border border-white/20 select-none">
           <button
             onClick={() => setActiveTab('split')}
-            className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-4 p-3 sm:p-5 font-black uppercase tracking-wider text-[10px] sm:text-xs md:text-sm text-center sm:text-left transition-all border-r border-white/20 cursor-pointer ${
+            className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 md:gap-3 p-3 md:p-4 font-black uppercase tracking-wider text-[10px] md:text-xs text-center sm:text-left transition-all border-r border-b md:border-b-0 border-white/20 cursor-pointer ${
               activeTab === 'split' 
                 ? 'bg-[#CCFF00] text-black' 
                 : 'bg-transparent text-white/50 hover:text-white hover:bg-white/5'
             }`}
           >
-            <span className="font-mono text-[9px] opacity-65 hidden md:inline">01 //</span>
+            <span className="font-mono text-[9px] opacity-65 hidden xl:inline">01 //</span>
             <span className="truncate">Active Split</span>
-            <Dumbbell className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+            <Dumbbell className="w-4 h-4 flex-shrink-0" />
           </button>
 
           <button
             onClick={() => setActiveTab('calendar')}
-            className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-4 p-3 sm:p-5 font-black uppercase tracking-wider text-[10px] sm:text-xs md:text-sm text-center sm:text-left transition-all border-r border-white/20 cursor-pointer ${
+            className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 md:gap-3 p-3 md:p-4 font-black uppercase tracking-wider text-[10px] md:text-xs text-center sm:text-left transition-all border-b md:border-b-0 md:border-r border-white/20 cursor-pointer ${
               activeTab === 'calendar' 
                 ? 'bg-[#CCFF00] text-black' 
                 : 'bg-transparent text-white/50 hover:text-white hover:bg-white/5'
             }`}
           >
-            <span className="font-mono text-[9px] opacity-65 hidden md:inline">02 //</span>
+            <span className="font-mono text-[9px] opacity-65 hidden xl:inline">02 //</span>
             <span className="truncate">Calendar</span>
-            <Calendar className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+            <Calendar className="w-4 h-4 flex-shrink-0" />
           </button>
 
           <button
             onClick={() => setActiveTab('dashboard')}
-            className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-4 p-3 sm:p-5 font-black uppercase tracking-wider text-[10px] sm:text-xs md:text-sm text-center sm:text-left transition-all cursor-pointer ${
+            className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 md:gap-3 p-3 md:p-4 font-black uppercase tracking-wider text-[10px] md:text-xs text-center sm:text-left transition-all border-r border-white/20 cursor-pointer ${
               activeTab === 'dashboard' 
                 ? 'bg-[#CCFF00] text-black' 
                 : 'bg-transparent text-white/50 hover:text-white hover:bg-white/5'
             }`}
           >
-            <span className="font-mono text-[9px] opacity-65 hidden md:inline">03 //</span>
+            <span className="font-mono text-[9px] opacity-65 hidden xl:inline">03 //</span>
             <span className="truncate">Analytics</span>
-            <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+            <BarChart3 className="w-4 h-4 flex-shrink-0" />
+          </button>
+
+          <button
+            onClick={() => setActiveTab('nutrition')}
+            className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 md:gap-3 p-3 md:p-4 font-black uppercase tracking-wider text-[10px] md:text-xs text-center sm:text-left transition-all cursor-pointer ${
+              activeTab === 'nutrition' 
+                ? 'bg-[#CCFF00] text-black' 
+                : 'bg-transparent text-white/50 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <span className="font-mono text-[9px] opacity-65 hidden xl:inline">04 //</span>
+            <span className="truncate">Nutrition</span>
+            <Utensils className="w-4 h-4 flex-shrink-0" />
           </button>
         </div>
 
@@ -100,6 +113,12 @@ export default function App() {
           {activeTab === 'dashboard' && (
             <div className="animate-fade-in">
               <DashboardSection logsManager={logsManager} />
+            </div>
+          )}
+
+          {activeTab === 'nutrition' && (
+            <div className="animate-fade-in">
+              <NutritionSection />
             </div>
           )}
         </main>

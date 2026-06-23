@@ -1,25 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { planData } from '../data';
 import { Exercise } from '../types';
-import { PlayCircle, TrendingUp, Save, Check } from 'lucide-react';
+import { PlayCircle, TrendingUp, Save, Check, Shuffle } from 'lucide-react';
 import { useWorkoutLog } from '../hooks/useWorkoutLog';
 import { getSuggestion } from '../utils/fitness';
 
 const ExerciseRow: React.FC<{ exercise: Exercise; index: number; dayType: string; dayId: number; logsManager: ReturnType<typeof useWorkoutLog> }> = ({ exercise, index, dayType, dayId, logsManager }) => {
   const [expanded, setExpanded] = useState(false);
+  const [activeExerciseName, setActiveExerciseName] = useState<string>(exercise.name);
+  const [playVideo, setPlayVideo] = useState(false);
+
   const { getLatestLog, saveLog } = logsManager;
-  const latestLog = getLatestLog(dayId, exercise.name);
+  const latestLog = getLatestLog(dayId, activeExerciseName);
   
-  const [weightInput, setWeightInput] = useState<string>(latestLog?.weight?.toString() || '');
-  const [repsInput, setRepsInput] = useState<string[]>(
-    latestLog?.reps?.map(String) || Array.from({ length: exercise.sets || 1 }, () => '')
-  );
+  const [weightInput, setWeightInput] = useState<string>('');
+  const [repsInput, setRepsInput] = useState<string[]>([]);
   
+  // Update inputs whenever active exercise, day, or sets definition changes
+  useEffect(() => {
+    const currentLog = getLatestLog(dayId, activeExerciseName);
+    setWeightInput(currentLog?.weight?.toString() || '');
+    setRepsInput(currentLog?.reps?.map(String) || Array.from({ length: exercise.sets || 1 }, () => ''));
+  }, [activeExerciseName, dayId, exercise.sets]);
+
   const suggestion = getSuggestion(exercise.reps || '', latestLog);
   const isLight = dayType.includes('Light');
 
   const handleSave = () => {
-    saveLog(dayId, exercise.name, parseFloat(weightInput) || 0, repsInput.map(r => parseInt(r) || 0));
+    saveLog(dayId, activeExerciseName, parseFloat(weightInput) || 0, repsInput.map(r => parseInt(r) || 0));
     setExpanded(false);
   };
 
@@ -27,7 +35,12 @@ const ExerciseRow: React.FC<{ exercise: Exercise; index: number; dayType: string
     <>
       <div 
         className={`flex flex-col md:grid md:grid-cols-12 gap-3 md:gap-4 p-4 border-b border-white/10 items-stretch hover:bg-white/5 transition-colors cursor-pointer ${expanded ? 'bg-white/5' : ''}`}
-        onClick={() => setExpanded(!expanded)}
+        onClick={() => {
+          setExpanded(!expanded);
+          if (!expanded) {
+            setPlayVideo(false);
+          }
+        }}
       >
         <div className="hidden md:block md:col-span-1 opacity-30 font-mono text-xl font-bold">
           {(index + 1).toString().padStart(2, '0')}
@@ -36,7 +49,12 @@ const ExerciseRow: React.FC<{ exercise: Exercise; index: number; dayType: string
         <div className="md:col-span-5 flex items-start justify-between gap-2">
           <div className="font-black uppercase text-base sm:text-lg leading-tight">
             <span className="md:hidden opacity-40 font-mono text-xs mr-1.5">{(index + 1).toString().padStart(2, '0')}</span>
-            {exercise.name}
+            {activeExerciseName}
+            {activeExerciseName !== exercise.name && (
+              <span className="text-[10px] text-[#CCFF00] font-mono tracking-widest uppercase block mt-1">
+                [Subbed: {exercise.name}]
+              </span>
+            )}
             {exercise.focus && (
               <p className="text-[9px] opacity-40 uppercase tracking-widest mt-0.5 block font-bold">{exercise.focus}</p>
             )}
@@ -72,14 +90,47 @@ const ExerciseRow: React.FC<{ exercise: Exercise; index: number; dayType: string
       {expanded && (
         <div className="p-4 md:p-6 bg-white/5 border-b border-white/10 flex flex-col lg:flex-row gap-8">
            <div className="w-full lg:w-1/3 flex flex-col gap-3">
-             <p className="text-[10px] font-bold opacity-40 uppercase tracking-widest">Demonstration</p>
-             <div className="aspect-video bg-black border border-white/20 relative group flex items-center justify-center overflow-hidden cursor-pointer" onClick={(e) => e.stopPropagation()}>
-               <img src={`https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop`} alt="Form" className="absolute inset-0 w-full h-full object-cover opacity-30 grayscale group-hover:opacity-50 transition-opacity" />
-               <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
-               <PlayCircle className="w-12 h-12 text-[#CCFF00] opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all z-10" />
-               <div className="absolute bottom-2 left-2 flex gap-2 z-10">
-                 <span className="bg-[#CCFF00] text-black text-[9px] font-bold uppercase px-2 py-0.5 rounded-sm">Tech Tip</span>
-               </div>
+             <p className="text-[10px] font-bold opacity-40 uppercase tracking-widest flex justify-between items-center">
+               <span>Form Demonstration</span>
+               {playVideo && (
+                 <button 
+                   onClick={(e) => {
+                     e.stopPropagation();
+                     setPlayVideo(false);
+                   }}
+                   className="text-[9px] font-black uppercase tracking-wider text-[#CCFF00] border-b border-[#CCFF00] leading-none"
+                 >
+                   Reset Loop
+                 </button>
+               )}
+             </p>
+             <div className="aspect-video bg-black border border-white/20 relative group flex items-center justify-center overflow-hidden" onClick={(e) => e.stopPropagation()}>
+               {playVideo && exercise.videoUrl ? (
+                 <iframe
+                   className="w-full h-full border-0 absolute inset-0 bg-black z-20"
+                   src={`${exercise.videoUrl}?autoplay=1&mute=1&playlist=${exercise.videoUrl.split('/embed/')[1]}&loop=1&controls=0&showinfo=0&rel=0`}
+                   title={`${activeExerciseName} Form Drill`}
+                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                   allowFullScreen
+                 ></iframe>
+               ) : (
+                 <>
+                   <img src={`https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=640&auto=format&fit=crop`} alt="Form" className="absolute inset-0 w-full h-full object-cover opacity-30 grayscale group-hover:opacity-50 transition-opacity" />
+                   <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
+                   <button 
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       setPlayVideo(true);
+                     }}
+                     className="w-12 h-12 text-[#CCFF00] hover:scale-110 transition-all z-10 flex items-center justify-center bg-black/60 border border-white/10 rounded-full"
+                   >
+                     <PlayCircle className="w-6 h-6" />
+                   </button>
+                   <div className="absolute bottom-2 left-2 flex gap-2 z-10">
+                     <span className="bg-[#CCFF00] text-black text-[9px] font-bold uppercase px-2 py-0.5 rounded-sm">Play Form Guide</span>
+                   </div>
+                 </>
+               )}
              </div>
              <p className="text-xs text-white/70 italic mt-2 border-l-2 border-[#CCFF00] pl-3">
                <span className="font-bold uppercase not-italic text-[#CCFF00] text-[10px] tracking-widest block mb-1">Execution Cue:</span>
@@ -94,6 +145,49 @@ const ExerciseRow: React.FC<{ exercise: Exercise; index: number; dayType: string
                    <p className="text-sm font-bold text-[#CCFF00] leading-snug">{suggestion}</p>
                  </div>
               </div>
+
+              {/* Research Backed Alternatives Swapper */}
+              {exercise.alternatives && exercise.alternatives.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-bold opacity-40 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <Shuffle className="w-3.5 h-3.5 text-[#CCFF00]" />
+                    <span>Research-Backed Alternatives for today</span>
+                  </p>
+                  <div className="flex flex-wrap gap-2 flex-row">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveExerciseName(exercise.name);
+                        setPlayVideo(false);
+                      }}
+                      className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-wider transition-all border rounded-sm cursor-pointer ${
+                        activeExerciseName === exercise.name
+                          ? 'bg-[#CCFF00] text-black border-[#CCFF00]'
+                          : 'border-white/10 text-white/70 hover:border-white/30 hover:bg-white/5'
+                      }`}
+                    >
+                      Default: {exercise.name}
+                    </button>
+                    {exercise.alternatives.map((alt) => (
+                      <button
+                        key={alt}
+                        type="button"
+                        onClick={() => {
+                          setActiveExerciseName(alt);
+                          setPlayVideo(false);
+                        }}
+                        className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-wider transition-all border rounded-sm cursor-pointer ${
+                          activeExerciseName === alt
+                            ? 'bg-[#CCFF00] text-black border-[#CCFF00]'
+                            : 'border-white/15 text-white/50 hover:border-white/30 hover:bg-white/5'
+                        }`}
+                      >
+                        {alt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                  <div>
@@ -133,15 +227,15 @@ const ExerciseRow: React.FC<{ exercise: Exercise; index: number; dayType: string
                  </div>
               </div>
 
-              <div className="mt-auto flex flex-col sm:flex-row items-center justify-end gap-3 w-full sm:w-auto">
+              <div className="mt-auto flex flex-col sm:flex-row items-center justify-end gap-3 w-full sm:w-auto pt-4 border-t border-white/5">
                  {latestLog && (
-                   <span className="text-[10px] font-black uppercase tracking-widest text-[#CCFF00] bg-[#CCFF00]/10 border border-[#CCFF00]/20 px-3 py-1 text-center w-full sm:w-auto rounded-sm">
+                   <span className="text-[10px] font-black uppercase tracking-widest text-[#CCFF00] bg-[#CCFF00]/10 border border-[#CCFF00]/20 px-3 py-1.5 text-center w-full sm:w-auto rounded-sm">
                      ✓ Performance Data Logged
                    </span>
                  )}
                  <button 
                    onClick={handleSave}
-                   className="flex items-center justify-center gap-2 bg-[#CCFF00] text-black px-6 py-4 sm:py-3 font-black uppercase tracking-widest text-xs hover:bg-white transition-colors w-full sm:w-auto"
+                   className="flex items-center justify-center gap-2 bg-[#CCFF00] text-black px-6 py-4 sm:py-3 font-black uppercase tracking-widest text-xs hover:bg-white transition-colors w-full sm:w-auto cursor-pointer"
                  >
                    <Save className="w-4 h-4" />
                    Save Performance
