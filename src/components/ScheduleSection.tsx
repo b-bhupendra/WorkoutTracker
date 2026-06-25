@@ -251,7 +251,7 @@ const ExerciseRow: React.FC<{ exercise: Exercise; index: number; dayType: string
                  </div>
                  <div>
                    <p className="text-[10px] font-bold opacity-40 uppercase tracking-widest mb-2 flex items-center justify-between">
-                     <span>Reps per Set ({exercise.sets || 1} sets)</span>
+                     <span>{exercise.reps.includes('sec') ? 'Seconds per Set' : 'Reps per Set'} ({exercise.sets || 1} sets)</span>
                      {latestLog && <span className="opacity-50 lowercase">prev: {latestLog.reps.join(',')}</span>}
                    </p>
                    <div className="flex flex-wrap sm:flex-nowrap gap-2 min-h-[48px]">
@@ -266,7 +266,7 @@ const ExerciseRow: React.FC<{ exercise: Exercise; index: number; dayType: string
                            setRepsInput(newReps);
                          }}
                          className="flex-1 min-w-[44px] bg-black border border-white/20 p-2 font-mono text-center text-white focus:border-[#CCFF00] outline-none text-xl transition-colors h-12"
-                         placeholder="-"
+                         placeholder={exercise.reps.includes('sec') ? "s" : "-"}
                        />
                      ))}
                    </div>

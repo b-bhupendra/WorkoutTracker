@@ -417,18 +417,6 @@ export const planData: WorkoutPlan = {
       rest_between_reps: "Continuous",
       exercises: [
         {
-          name: "Farmer's Carries",
-          sets: 4,
-          reps: "45 sec",
-          focus: "Heavy DBs. Chest up, core braced, walk with purpose.",
-          videoUrl: "https://www.youtube.com/embed/FkVkZbcHqlE",
-          alternatives: [
-            "Suitcase Carries",
-            "Trap Bar Carries",
-            "Overhead Sandbag Carries"
-          ]
-        },
-        {
           name: "Goblet Squats",
           sets: 4,
           reps: "20",
@@ -465,15 +453,27 @@ export const planData: WorkoutPlan = {
           ]
         },
         {
-          name: "Medicine Ball Slams",
+          name: "Plyo Push-ups",
           sets: 4,
           reps: "15",
-          focus: "Slam through the floor. Max core & lat engagement.",
+          focus: "Explode off the floor, land soft. Core tight.",
           videoUrl: "https://www.youtube.com/embed/Rx_UHMnQljU",
           alternatives: [
-            "Battle Ropes",
-            "Sledgehammer Tire Strikes",
-            "Plyo Pushups"
+            "Medicine Ball Slams",
+            "Clapping Push-ups",
+            "Explosive Push-ups"
+          ]
+        },
+        {
+          name: "Farmer's Carries",
+          sets: 4,
+          reps: "45 sec",
+          focus: "Heavy DBs. Chest up, core braced, walk with purpose.",
+          videoUrl: "https://www.youtube.com/embed/FkVkZbcHqlE",
+          alternatives: [
+            "Suitcase Carries",
+            "Trap Bar Carries",
+            "Overhead Sandbag Carries"
           ]
         }
       ]
