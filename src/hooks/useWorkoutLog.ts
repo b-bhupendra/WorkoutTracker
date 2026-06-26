@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react';
+import { db } from '../lib/firebase';
+import { useAuth } from '../components/AuthProvider';
+import { doc, getDoc, setDoc, onSnapshot, collection, writeBatch } from 'firebase/firestore';
 
 export interface ExerciseLog {
   weight: number;
@@ -25,26 +28,99 @@ export interface WorkoutLogs {
 export function useWorkoutLog() {
   const [logs, setLogs] = useState<WorkoutLogs>({});
   const [history, setHistory] = useState<HistoricalLogs>({});
+  const { user } = useAuth();
 
-  // Load from LocalStorage
+  // Load from LocalStorage initially
   useEffect(() => {
+    let initialLogs = {};
+    let initialHistory = {};
+    
     const savedLogs = localStorage.getItem('hypertrophy_logs');
     if (savedLogs) {
-      try { setLogs(JSON.parse(savedLogs)); } catch (e) {}
+      try { initialLogs = JSON.parse(savedLogs); setLogs(initialLogs); } catch (e) {}
     }
     const savedHistory = localStorage.getItem('hypertrophy_history');
     if (savedHistory) {
-      try { setHistory(JSON.parse(savedHistory)); } catch (e) {}
+      try { initialHistory = JSON.parse(savedHistory); setHistory(initialHistory); } catch (e) {}
     } else {
-      // Seed initial history with dummy historical data so the user sees beautiful chart bars and lines immediately!
       const dummyHistory: HistoricalLogs = generateInitialMockData();
       setHistory(dummyHistory);
       localStorage.setItem('hypertrophy_history', JSON.stringify(dummyHistory));
     }
   }, []);
 
-  // Save legacy daily log
-  const saveLog = (day: number, exerciseName: string, weight: number, reps: number[]) => {
+  // Firebase Synchronization
+  useEffect(() => {
+    if (!user) return;
+
+    const userDocRef = doc(db, 'users', user.uid);
+    
+    getDoc(userDocRef).then((snap) => {
+      if (!snap.exists()) {
+        setDoc(userDocRef, { createdAt: new Date().toISOString() }, { merge: true });
+        
+        // Sync local storage to Firebase if it's a new Firebase user
+        const batch = writeBatch(db);
+        
+        const localHistoryStr = localStorage.getItem('hypertrophy_history');
+        if (localHistoryStr) {
+          try {
+            const localHist = JSON.parse(localHistoryStr);
+            Object.entries(localHist).forEach(([dateStr, dayData]) => {
+              const histRef = doc(collection(userDocRef, 'history'), dateStr);
+              batch.set(histRef, dayData as any);
+            });
+          } catch(e) {}
+        }
+
+        const localLogsStr = localStorage.getItem('hypertrophy_logs');
+        if (localLogsStr) {
+          try {
+            const localLogs = JSON.parse(localLogsStr);
+            Object.entries(localLogs).forEach(([dayId, dayLogs]) => {
+              const logRef = doc(collection(userDocRef, 'dailyLogs'), dayId.toString());
+              batch.set(logRef, { exercises: dayLogs });
+            });
+          } catch(e) {}
+        }
+        batch.commit().catch(console.error);
+      }
+    });
+
+    const unsubscribeHistory = onSnapshot(collection(userDocRef, 'history'), (snapshot) => {
+      const newHistory: HistoricalLogs = {};
+      snapshot.forEach(docSnap => {
+        newHistory[docSnap.id] = docSnap.data() as DayHistoryData;
+      });
+      setHistory(prev => {
+        const merged = { ...prev, ...newHistory };
+        localStorage.setItem('hypertrophy_history', JSON.stringify(merged));
+        return merged;
+      });
+    });
+
+    const unsubscribeLogs = onSnapshot(collection(userDocRef, 'dailyLogs'), (snapshot) => {
+      const newLogs: WorkoutLogs = {};
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.exercises) {
+          newLogs[parseInt(docSnap.id)] = data.exercises;
+        }
+      });
+      setLogs(prev => {
+        const merged = { ...prev, ...newLogs };
+        localStorage.setItem('hypertrophy_logs', JSON.stringify(merged));
+        return merged;
+      });
+    });
+
+    return () => {
+      unsubscribeHistory();
+      unsubscribeLogs();
+    };
+  }, [user]);
+
+  const saveLog = async (day: number, exerciseName: string, weight: number, reps: number[]) => {
     setLogs((prev) => {
       const newLogs = { ...prev };
       if (!newLogs[day]) newLogs[day] = {};
@@ -53,31 +129,52 @@ export function useWorkoutLog() {
       return newLogs;
     });
 
-    // Also auto-log to "today" string in history
     const todayStr = new Date().toISOString().split('T')[0];
-    saveHistoricalLog(todayStr, day, exerciseName, weight, reps);
+    
+    setHistory((prev) => {
+      const newHistory = { ...prev };
+      if (!newHistory[todayStr]) {
+        newHistory[todayStr] = { day, exercises: {} };
+      }
+      newHistory[todayStr].exercises[exerciseName] = { weight, reps };
+      localStorage.setItem('hypertrophy_history', JSON.stringify(newHistory));
+      return newHistory;
+    });
+
+    if (user) {
+      const userDocRef = doc(db, 'users', user.uid);
+      const batch = writeBatch(db);
+
+      const logRef = doc(collection(userDocRef, 'dailyLogs'), day.toString());
+      batch.set(logRef, { 
+        exercises: { [exerciseName]: { weight, reps } }
+      }, { merge: true });
+
+      const histRef = doc(collection(userDocRef, 'history'), todayStr);
+      batch.set(histRef, {
+        day,
+        exercises: { [exerciseName]: { weight, reps } }
+      }, { merge: true });
+
+      await batch.commit().catch(console.error);
+    }
   };
 
   const getLatestLog = (day: number, exerciseName: string): ExerciseLog | null => {
     return logs[day]?.[exerciseName] || null;
   };
 
-  // Modern Historical Logging
-  const saveHistoricalLog = (dateStr: string, day: number, exerciseName: string, weight: number, reps: number[]) => {
+  const saveHistoricalLog = async (dateStr: string, day: number, exerciseName: string, weight: number, reps: number[]) => {
     setHistory((prev) => {
       const newHistory = { ...prev };
       if (!newHistory[dateStr]) {
-        newHistory[dateStr] = {
-          day,
-          exercises: {}
-        };
+        newHistory[dateStr] = { day, exercises: {} };
       }
       newHistory[dateStr].exercises[exerciseName] = { weight, reps };
       localStorage.setItem('hypertrophy_history', JSON.stringify(newHistory));
       return newHistory;
     });
 
-    // Mirror to daily schedule view
     setLogs((prev) => {
       const newLogs = { ...prev };
       if (!newLogs[day]) newLogs[day] = {};
@@ -85,20 +182,44 @@ export function useWorkoutLog() {
       localStorage.setItem('hypertrophy_logs', JSON.stringify(newLogs));
       return newLogs;
     });
+
+    if (user) {
+      const userDocRef = doc(db, 'users', user.uid);
+      const batch = writeBatch(db);
+
+      const histRef = doc(collection(userDocRef, 'history'), dateStr);
+      batch.set(histRef, {
+        day,
+        exercises: { [exerciseName]: { weight, reps } }
+      }, { merge: true });
+
+      const logRef = doc(collection(userDocRef, 'dailyLogs'), day.toString());
+      batch.set(logRef, { 
+        exercises: { [exerciseName]: { weight, reps } }
+      }, { merge: true });
+
+      await batch.commit().catch(console.error);
+    }
   };
 
-  const deleteHistoricalLog = (dateStr: string) => {
+  const deleteHistoricalLog = async (dateStr: string) => {
     setHistory((prev) => {
       const newHistory = { ...prev };
       delete newHistory[dateStr];
       localStorage.setItem('hypertrophy_history', JSON.stringify(newHistory));
       return newHistory;
     });
+
+    if (user) {
+      const histRef = doc(collection(doc(db, 'users', user.uid), 'history'), dateStr);
+      const batch = writeBatch(db);
+      batch.delete(histRef);
+      await batch.commit().catch(console.error);
+    }
   };
 
-  // Get most recent log in our entire logging timeline for progression advice
   const getLatestHistoricalLog = (exerciseName: string, beforeDateStr?: string): { weight: number, reps: number[], date: string } | null => {
-    const dates = Object.keys(history).sort((a, b) => b.localeCompare(a)); // Latest first
+    const dates = Object.keys(history).sort((a, b) => b.localeCompare(a));
     for (const d of dates) {
       if (beforeDateStr && d >= beforeDateStr) continue;
       const log = history[d]?.exercises[exerciseName];
@@ -109,14 +230,12 @@ export function useWorkoutLog() {
     return null;
   };
 
-  // Bulk import (replaces history)
-  const importHistory = (imported: HistoricalLogs) => {
+  const importHistory = async (imported: HistoricalLogs) => {
     setHistory(imported);
     localStorage.setItem('hypertrophy_history', JSON.stringify(imported));
 
-    // Rebuild the legacy schedule summary from the latest history points
     const newLogs: WorkoutLogs = {};
-    const sortedDates = Object.keys(imported).sort((a, b) => a.localeCompare(b)); // oldest to newest
+    const sortedDates = Object.keys(imported).sort((a, b) => a.localeCompare(b));
     for (const date of sortedDates) {
       const dayData = imported[date];
       if (!dayData) continue;
@@ -128,6 +247,23 @@ export function useWorkoutLog() {
     }
     setLogs(newLogs);
     localStorage.setItem('hypertrophy_logs', JSON.stringify(newLogs));
+
+    if (user) {
+      const userDocRef = doc(db, 'users', user.uid);
+      const batch = writeBatch(db);
+
+      Object.entries(imported).forEach(([dateStr, dayData]) => {
+        const histRef = doc(collection(userDocRef, 'history'), dateStr);
+        batch.set(histRef, dayData);
+      });
+
+      Object.entries(newLogs).forEach(([dayId, dayLogs]) => {
+        const logRef = doc(collection(userDocRef, 'dailyLogs'), dayId.toString());
+        batch.set(logRef, { exercises: dayLogs });
+      });
+
+      await batch.commit().catch(console.error);
+    }
   };
 
   return { 

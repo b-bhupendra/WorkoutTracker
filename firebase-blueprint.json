@@ -1,0 +1,30 @@
+{
+  "projectInfo": {
+    "name": "Hypertrophy Workout Tracker",
+    "description": "User specific workout logs"
+  },
+  "collections": {
+    "users": {
+      "description": "User profiles and top level data",
+      "fields": {
+        "createdAt": "timestamp",
+        "email": "string"
+      },
+      "subcollections": {
+        "history": {
+          "description": "Historical daily workout logs",
+          "fields": {
+            "day": "number",
+            "exercises": "map (key: exerciseName, value: { weight: number, reps: array of numbers })"
+          }
+        },
+        "dailyLogs": {
+          "description": "Latest log state per day (day 1 to 6)",
+          "fields": {
+            "exercises": "map (key: exerciseName, value: { weight: number, reps: array of numbers })"
+          }
+        }
+      }
+    }
+  }
+}
